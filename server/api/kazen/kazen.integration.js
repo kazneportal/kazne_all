@@ -14,6 +14,11 @@ describe('Kazen API:', function() {
   var userId;
   var otherKnazId;
   var token;
+  var tokenModerator;
+  var tokenKnaz;
+  var moderator;
+  var oneKazen;
+  var otherKazen;
 
   // Clear users before testing
   before(function(done) {
@@ -37,6 +42,16 @@ describe('Kazen API:', function() {
       otherKnazId = otherKnaz._id;
       return otherKnaz.save();
     })
+    .then(() => {
+      moderator = new User({
+        name: 'Fake knaz',
+        email: 'moderator@example.com',
+        password: 'password',
+        role: 'moderator',
+        linkedUsers: user,
+      });
+      return moderator.save();
+    })
       .then(() => {
         request(app)
           .post('/auth/local')
@@ -47,16 +62,73 @@ describe('Kazen API:', function() {
           .expect(200)
           .expect('Content-Type', /json/)
           .end((err, res) => {
+            if(err) {
+              return done(err);
+            }
             token = res.body.token;
             request(app)
               .get('/api/users/me')
               .set('authorization', `Bearer ${token}`)
               .expect(200)
               .expect('Content-Type', /json/)
-              .end((err, res) => {
-                userId = res.body._id;
-                expect(res.body._id.toString()).to.equal(user._id.toString());
-                done();
+              .end((errLogin, resLogin) => {
+                userId = resLogin.body._id;
+                expect(resLogin.body._id.toString()).to.equal(user._id.toString());
+                // post one kazen
+                request(app)
+                  .post('/api/kazne')
+                  .set('authorization', `Bearer ${token}`)
+                  .send({
+                    name: 'New Kazen',
+                    text: 'This is the brand new kazen!!!',
+                    userRef: userId,
+                  })
+                  .expect(201)
+                  .expect('Content-Type', /json/)
+                  .end((errPost, resPost) => {
+                    if(errPost) {
+                      return done(errPost);
+                    }
+                    oneKazen = resPost.body;
+                    // create also a kazen under a different user
+                    request(app)
+                      .post('/auth/local')
+                      .send({
+                        email: 'knaz@example.com',
+                        password: 'password'
+                      })
+                      .expect(200)
+                      .expect('Content-Type', /json/)
+                      .end((error, response) => {
+                        tokenKnaz = response.body.token;
+                        request(app)
+                          .get('/api/users/me')
+                          .set('authorization', `Bearer ${tokenKnaz}`)
+                          .expect(200)
+                          .expect('Content-Type', /json/)
+                          .end((errorLogin, responseLogin) => {
+                            expect(responseLogin.body._id.toString()).to.equal(otherKnaz._id.toString());
+                            // post one kazen
+                            request(app)
+                              .post('/api/kazne')
+                              .set('authorization', `Bearer ${tokenKnaz}`)
+                              .send({
+                                name: 'New Kazen',
+                                text: 'This is the brand new kazen!!!',
+                                userRef: otherKnaz._id,
+                              })
+                              .expect(201)
+                              .expect('Content-Type', /json/)
+                              .end((errorPost, responsePost) => {
+                                if(errorPost) {
+                                  return done(errorPost);
+                                }
+                                otherKazen = responsePost.body;
+                                done();
+                              });
+                          });
+                      });
+                  });
               });
           });
       });
@@ -284,6 +356,107 @@ describe('Kazen API:', function() {
           }
           done();
         });
+    });
+  });
+  describe('Moderator privileges', function() {
+    beforeEach(function(done) {
+      request(app)
+          .post('/auth/local')
+          .send({
+            email: 'moderator@example.com',
+            password: 'password'
+          })
+          .expect(200)
+          .expect('Content-Type', /json/)
+          .end((err, res) => {
+            if(err) {
+              return done(err);
+            }
+            tokenModerator = res.body.token;
+            request(app)
+              .get('/api/users/me')
+              .set('authorization', `Bearer ${tokenModerator}`)
+              .expect(200)
+              .expect('Content-Type', /json/)
+              .end((error, response) => {
+                expect(response.body._id.toString()).to.equal(moderator._id.toString());
+                done();
+              });
+          });
+    });
+    it('should allow to create linked knaz`s kazen', function(done) {
+      request(app)
+        .post('/api/kazne')
+        .set('authorization', `Bearer ${tokenModerator}`)
+        .send({
+          name: 'New Kazen',
+          text: 'This is the brand new kazen!!!',
+          userRef: userId,
+        })
+        .expect(201)
+        .expect('Content-Type', /json/)
+        .end((err, res) => {
+          if(err) {
+            return done(err);
+          }
+          expect(res.status).to.equal(201);
+          done();
+        });
+    });
+    it('should allow to edit linked knaz`s kazen', function(done) {
+      request(app)
+        .patch(`/api/kazne/${oneKazen._id}`)
+        .set('authorization', `Bearer ${tokenModerator}`)
+        .send([
+          { op: 'replace', path: '/name', value: 'Patched Kazen' },
+          { op: 'replace', path: '/text', value: 'This is the patched kazen!!!' }
+        ])
+        .expect(200)
+        .expect('Content-Type', /json/)
+        .end((err, res) => {
+          if(err) {
+            return done(err);
+          }
+          expect(res.status).to.equal(200);
+          done();
+        });
+    });
+    it('should not allow to create not linked knaz`s kazen', function(done) {
+      request(app)
+        .post('/api/kazne')
+        .set('authorization', `Bearer ${tokenModerator}`)
+        .send({
+          name: 'New Kazen',
+          text: 'This is the brand new kazen!!!',
+          userRef: otherKnazId,
+        })
+        .expect(500)
+        .expect('Content-Type', /json/)
+        .end((err, res) => {
+          if(err) {
+            return done(err);
+          }
+          expect(res.status).to.equal(500);
+          done();
+        });
+    });
+    it('should not allow to edit not linked knaz`s kazen', function(done) {
+      request(app)
+          .patch(`/api/kazne/${otherKazen._id}`)
+          .set('authorization', `Bearer ${tokenModerator}`)
+          .send([
+            { op: 'replace', path: '/name', value: 'Patched Kazen' },
+            { op: 'replace', path: '/text', value: 'This is the patched kazen!!!' }
+          ])
+          .expect(500)
+          .expect('Content-Type', /json/)
+          .end((err, res) => {
+            if(err) {
+              return done(err);
+            }
+            expect(res.status).to.equal(500);
+            done();
+          });
     });
   });
 });

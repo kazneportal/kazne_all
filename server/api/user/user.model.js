@@ -34,6 +34,11 @@ var UserSchema = new Schema({
       }
     }
   },
+  linkedUsers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: [],
+  }],
   provider: String,
   salt: String,
   facebook: {},
