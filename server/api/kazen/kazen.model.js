@@ -12,7 +12,14 @@ var KazenSchema = new mongoose.Schema({
   photo: {
     data: Buffer,
     contentType: String },
-  comments: [{ body: String, date: Date }],
+  comments: [{
+    body: String,
+    date: Date,
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }],
   */
   // author of the kazen
   userRef: {
@@ -26,6 +33,9 @@ var KazenSchema = new mongoose.Schema({
     // number of times added to favorites
     favs: { type: Number, default: 0 },
   },
+  tags: [String],
+  // date when this kazen was presented
+  presented: { type: Date, default: Date.now },
   created: { type: Date, default: Date.now },
   modified: { type: Date, default: Date.now },
 });

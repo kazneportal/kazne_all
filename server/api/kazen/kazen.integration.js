@@ -458,5 +458,21 @@ describe('Kazen API:', function() {
             done();
           });
     });
+    it('should allow to add the kazen to a user', function(done) {
+      request(app)
+        .patch(`/api/users/${userId}`)
+        .set('authorization', `Bearer ${token}`)
+        // .send([
+        //   { op: 'replace', path: '/linkedKazne', value: otherKazen._id },
+        // ])
+        .send({ linkedKazne: otherKazen._id})
+        .expect(204)
+        .end((errPatch, resPatch) => {
+          if(errPatch) {
+            return done(errPatch);
+          }
+          done();
+        });
+    });
   });
 });

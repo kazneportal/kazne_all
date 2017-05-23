@@ -10,7 +10,8 @@ var userCtrlStub = {
   me: 'userCtrl.me',
   changePassword: 'userCtrl.changePassword',
   show: 'userCtrl.show',
-  create: 'userCtrl.create'
+  create: 'userCtrl.create',
+  patch: 'userCtrl.patch',
 };
 
 var authServiceStub = {
@@ -26,7 +27,8 @@ var routerStub = {
   get: sinon.spy(),
   put: sinon.spy(),
   post: sinon.spy(),
-  delete: sinon.spy()
+  delete: sinon.spy(),
+  patch: sinon.spy()
 };
 
 // require the index with our stubbed out modules
@@ -81,6 +83,14 @@ describe('User API Router:', function() {
     it('should be authenticated and route to user.controller.show', function() {
       expect(routerStub.get
         .withArgs('/:id', 'authService.isAuthenticated', 'userCtrl.show')
+        ).to.have.been.calledOnce;
+    });
+  });
+
+  describe('PATCH /api/users/:id', function() {
+    it('should be authenticated and route to user.controller.patch', function() {
+      expect(routerStub.patch
+        .withArgs('/:id', 'authService.isAuthenticated', 'userCtrl.patch')
         ).to.have.been.calledOnce;
     });
   });

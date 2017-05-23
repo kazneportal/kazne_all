@@ -9,6 +9,11 @@ const authTypes = ['github', 'twitter', 'facebook', 'google'];
 
 var UserSchema = new Schema({
   name: String,
+  description: String,
+  // currently, no photo. will implement later.
+  // photo: {
+  //   data: Buffer,
+  //   contentType: String },
   email: {
     type: String,
     lowercase: true,
@@ -34,9 +39,24 @@ var UserSchema = new Schema({
       }
     }
   },
+  /**
+   * Uses:
+   * Moderator
+   *  rights to maintain kazne of linked users with type knaz
+   * User
+   *  favorite users of type knaz
+   */
   linkedUsers: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    default: [],
+  }],
+  /**
+   * Used for favourite kazne
+   */
+  linkedKazne: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Kazen',
     default: [],
   }],
   provider: String,

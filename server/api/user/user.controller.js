@@ -98,6 +98,26 @@ export function changePassword(req, res) {
     });
 }
 
+// Updates an existing User in the DB
+export function patch(req, res) {
+  var userId = req.user._id;
+  return User.findById(userId).exec()
+    .then(user => {
+      if(!user) {
+        return res.status(401).end();
+      }
+      user.description = req.body.description || user.description;
+      user.linkedKazne = req.body.linkedKazne || user.linkedKazne;
+      user.linkedUsers = req.body.linkedUsers || user.linkedUsers;
+      return user.save()
+        .then(() => {
+          res.status(204).end();
+        })
+        .catch(validationError(res));
+    })
+    .catch(handleError(res));
+}
+
 /**
  * Get my info
  */
