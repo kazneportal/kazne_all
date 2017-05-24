@@ -6,13 +6,15 @@
 'use strict';
 import Thing from '../api/thing/thing.model';
 import User from '../api/user/user.model';
+import Kazen from '../api/kazen/kazen.model';
+
 import config from './environment/';
 
 export default function seedDatabaseIfNeeded() {
   if(config.seedDB) {
     Thing.find({}).remove()
       .then(() => {
-        Thing.create({
+        return Thing.create({
           name: 'Development Tools',
           info: 'Integration with popular tools such as Webpack, Gulp, Babel, TypeScript, Karma, '
                 + 'Mocha, ESLint, Node Inspector, Livereload, Protractor, Pug, '
@@ -44,22 +46,77 @@ export default function seedDatabaseIfNeeded() {
     .then(() => console.log('finished populating things'))
     .catch(err => console.log('error populating things', err));
 
-    User.find({}).remove()
+    Kazen.find({}).remove()
       .then(() => {
-        User.create({
-          provider: 'local',
-          name: 'Test User',
-          email: 'test@example.com',
-          password: 'test'
-        }, {
-          provider: 'local',
-          role: 'admin',
-          name: 'Admin',
-          email: 'admin@example.com',
-          password: 'admin'
-        })
-        .then(() => console.log('finished populating users'))
-        .catch(err => console.log('error populating users', err));
+        return User.find({}).remove()
+          .then(() => {
+            return User.create({
+              provider: 'local',
+              name: 'Test User',
+              email: 'test@example.com',
+              password: 'test'
+            }, {
+              provider: 'local',
+              role: 'admin',
+              name: 'Admin',
+              email: 'admin@example.com',
+              password: 'admin'
+            })
+            .then(() => console.log('finished populating users'))
+            .catch(err => console.log('error seeding', err));
+          })
+          .then(() => {
+            return User.create({
+              provider: 'local',
+              name: 'Knaz 1',
+              email: 'knaz1@example.com',
+              password: 'test',
+              role: 'knaz',
+            })
+            .then(knaz1 => {
+              return Kazen.create({
+                name: 'bezva kazen',
+                text: 'tato kazen je bezva',
+                userRef: knaz1._id,
+              }, {
+                name: 'dalsia bezva kazen',
+                text: 'tato kazen je este viac bezv ako ta predosla',
+                userRef: knaz1._id,
+              });
+            })
+            .then(() => console.log('created kazne pre knaza 2'))
+            .catch(err => console.log('error creating kazne', err));
+          })
+          .then(() => {
+            return User.create({
+              provider: 'local',
+              name: 'Knaz 2',
+              email: 'knaz2@example.com',
+              password: 'test',
+              role: 'knaz',
+            })
+            .then(knaz2 => {
+              Kazen.create({
+                name: 'moja kazen',
+                text: 'aj ja pisem bezva kazne',
+                userRef: knaz2._id,
+              }, {
+                name: 'moja druha kazen',
+                text: 'ta prva bola bezva, nie?',
+                userRef: knaz2._id,
+              });
+              return User.create({
+                provider: 'local',
+                name: 'Moderator',
+                email: 'moderator@example.com',
+                password: 'test',
+                role: 'moderator',
+                linkedUsers: knaz2.id,
+              });
+            })
+            .then(() => console.log('created kazne pre knaza 2'))
+            .catch(err => console.log('error creating kazne', err));
+          });
       });
   }
 }
